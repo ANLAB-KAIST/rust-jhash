@@ -1,0 +1,6 @@
+[package]
+name = "jhash"
+version = "0.1.0"
+authors = ["Keunhong Lee <dlrmsghd@gmail.com>"]
+
+[dependencies]
