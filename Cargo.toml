@@ -4,3 +4,7 @@ version = "0.1.0"
 authors = ["Keunhong Lee <dlrmsghd@gmail.com>"]
 
 [dependencies]
+
+[lib]
+name = "jhash"
+path = "src/lib.rs"

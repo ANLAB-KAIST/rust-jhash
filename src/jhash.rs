@@ -380,3 +380,22 @@ impl std::hash::Hasher for JHasher {
     }
 }
 
+#[derive(Default)]
+pub struct JHashBuilder {
+	initial_value: u32,
+}
+
+impl JHashBuilder {
+	pub fn new(initial_value: u32) ->JHashBuilder {
+		JHashBuilder {
+			initial_value: initial_value,
+		}
+	}
+}
+
+impl std::hash::BuildHasher for JHashBuilder {
+	type Hasher = JHasher;
+    fn build_hasher(&self) -> Self::Hasher {
+    	JHasher::new(self.initial_value)
+    }
+}

@@ -1,1 +1,3 @@
-pub mod jhash;
+mod jhash;
+
+pub use jhash::*;
