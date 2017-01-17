@@ -13,18 +13,23 @@ pub fn jhash_mix(a: &mut u32, b: &mut u32, c: &mut u32) {
 	*a = a.wrapping_sub(*c);  
 	*a ^= rotate_left_u32(*c, 4);  
 	*c = c.wrapping_add(*b);
+	
 	*b = b.wrapping_sub(*a);  
 	*b ^= rotate_left_u32(*a, 6);  
 	*a = a.wrapping_add(*c);	
+	
 	*c =c.wrapping_sub(*b);  
 	*c ^= rotate_left_u32(*b, 8);  
 	*b = b.wrapping_add(*a);	
+	
 	*a = a.wrapping_sub(*c);  
 	*a ^= rotate_left_u32(*c, 16); 
 	*c = c.wrapping_add(*b);	
+	
 	*b = b.wrapping_sub(*a);  
 	*b ^= rotate_left_u32(*a, 19); 
 	*a = a.wrapping_add(*c);	
+	
 	*c = c.wrapping_sub(*b);  
 	*c ^= rotate_left_u32(*b, 4);  
 	*b = b.wrapping_add(*a);
@@ -34,16 +39,22 @@ pub fn jhash_mix(a: &mut u32, b: &mut u32, c: &mut u32) {
 pub fn jhash_final(mut a: u32, mut b: u32, mut c: u32) -> u32 {						
 	c ^= b; 
 	c = c.wrapping_sub(rotate_left_u32(b, 14));
+	
 	a ^= c; 
 	a = a.wrapping_sub(rotate_left_u32(c, 11));
+	
 	b ^= a; 
 	b = b.wrapping_sub(rotate_left_u32(a, 25));
+	
 	c ^= b; 
 	c = c.wrapping_sub(rotate_left_u32(b, 16));
+	
 	a ^= c; 
 	a = a.wrapping_sub(rotate_left_u32(c, 4));
+	
 	b ^= a; 
 	b = b.wrapping_sub(rotate_left_u32(a, 14));
+	
 	c ^= b; 
 	c = c.wrapping_sub(rotate_left_u32(b, 24));
 	c
@@ -61,14 +72,12 @@ pub fn jhash(key: &[u8], initval: u32) -> u32
 	let total_length = key.len();
 	let mut length = 0usize;
 
-	a = JHASH_INITVAL + (length as u32) + initval;
-	b = JHASH_INITVAL + (length as u32) + initval;
-	c = JHASH_INITVAL + (length as u32) + initval;
+	a = JHASH_INITVAL.wrapping_add(length as u32).wrapping_add(initval);
+	b = a;
+	c = a;
 	
 	let mut k: *const u8 = key.as_ptr();
-
-	/* All but the last block: affect some 32 bits of (a,b,c) */
-	while length <= total_length - 12 {
+	while length + 12 <= total_length {
 		a = a.wrapping_add(unsafe{ *(k as *const u32) });
 		k = unsafe {k.offset(4)};
 		b = b.wrapping_add(unsafe{ *(k as *const u32) });
@@ -202,9 +211,9 @@ pub fn jhash2(key: &[u32], initval: u32) -> u32
 	let total_length = key.len();
 	let mut length = 0usize;
 
-	a = JHASH_INITVAL + (length as u32) + initval;
-	b = JHASH_INITVAL + (length as u32) + initval;
-	c = JHASH_INITVAL + (length as u32) + initval;
+	a = JHASH_INITVAL.wrapping_add(length as u32).wrapping_add(initval);
+	b = a;
+	c = a;
 
 	/* Handle most of the key */
 	while length <= total_length - 3 {
@@ -314,6 +323,17 @@ impl JHasher {
 	}
 }
 
+#[inline(always)]
+#[cfg(target_endian = "little")]
+fn split_u64(val: u64) -> (u32, u32) {
+	(((val >> 32) as u32), ((val & 0x00000000FFFFFFFFu64) as u32))
+}
+
+#[cfg(target_endian = "big")]
+fn split_u64(val: u64) -> (u32, u32) {
+	(((val & 0x00000000FFFFFFFFu64) as u32), ((val >> 32) as u32))
+}
+
 impl std::hash::Hasher for JHasher {
 	#[inline(always)]
     fn finish(&self) -> u64 {
@@ -328,7 +348,6 @@ impl std::hash::Hasher for JHasher {
 				jhash_2words(val1, val2, self.current) as u64
 			},
 		}
-    	
     }
     #[inline(always)]
     fn write(&mut self, bytes: &[u8]) {
@@ -352,9 +371,7 @@ impl std::hash::Hasher for JHasher {
     }
     #[inline(always)]
     fn write_u64(&mut self, val: u64) {
-    	//XXX Is it OK to do like this?
-    	let val_a = (val >> 32) as u32;
-    	let val_b = (val & 0x00000000FFFFFFFFu64) as u32;
+    	let (val_a, val_b) = split_u64(val);
     	
     	match self.buffer {
 			JHashBuffer::None => {
