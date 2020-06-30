@@ -1,3 +1,5 @@
+#![allow(clippy::unreadable_literal,clippy::identity_op)]
+
 #[inline(always)]
 pub fn jhash_mix(a: &mut u32, b: &mut u32, c: &mut u32) {
     *a = a.wrapping_sub(*c);
@@ -26,6 +28,7 @@ pub fn jhash_mix(a: &mut u32, b: &mut u32, c: &mut u32) {
 }
 
 #[inline(always)]
+#[must_use]
 pub fn jhash_final(mut a: u32, mut b: u32, mut c: u32) -> u32 {
     c ^= b;
     c = c.wrapping_sub(b.rotate_left(14));
@@ -53,6 +56,7 @@ pub fn jhash_final(mut a: u32, mut b: u32, mut c: u32) -> u32 {
 pub const JHASH_INITVAL: u32 = 0xdeadbeef;
 
 #[inline(always)]
+#[must_use]
 pub fn jhash(mut key: &[u8], initval: u32) -> u32 {
     let mut a = JHASH_INITVAL
         .wrapping_add(key.len() as u32)
@@ -69,7 +73,7 @@ pub fn jhash(mut key: &[u8], initval: u32) -> u32 {
         key = &key[12..];
     }
 
-    if key.len() == 0 {
+    if key.is_empty() {
         return c;
     }
 
@@ -92,6 +96,7 @@ pub fn jhash(mut key: &[u8], initval: u32) -> u32 {
 }
 
 #[inline(always)]
+#[must_use]
 pub fn jhash2(mut key: &[u32], initval: u32) -> u32 {
     let mut a = JHASH_INITVAL
         .wrapping_add(key.len() as u32)
@@ -132,6 +137,7 @@ pub fn jhash2(mut key: &[u32], initval: u32) -> u32 {
 }
 
 #[inline(always)]
+#[must_use]
 fn jhash_nwords(mut a: u32, mut b: u32, mut c: u32, initval: u32) -> u32 {
     a = a.wrapping_add(initval);
     b = b.wrapping_add(initval);
@@ -141,6 +147,7 @@ fn jhash_nwords(mut a: u32, mut b: u32, mut c: u32, initval: u32) -> u32 {
 }
 
 #[inline(always)]
+#[must_use]
 pub fn jhash_3words(a: u32, b: u32, c: u32, initval: u32) -> u32 {
     jhash_nwords(
         a,
@@ -151,6 +158,7 @@ pub fn jhash_3words(a: u32, b: u32, c: u32, initval: u32) -> u32 {
 }
 
 #[inline(always)]
+#[must_use]
 pub fn jhash_2words(a: u32, b: u32, initval: u32) -> u32 {
     jhash_nwords(
         a,
@@ -161,6 +169,7 @@ pub fn jhash_2words(a: u32, b: u32, initval: u32) -> u32 {
 }
 
 #[inline(always)]
+#[must_use]
 pub fn jhash_1words(a: u32, initval: u32) -> u32 {
     jhash_nwords(
         a,
@@ -191,6 +200,7 @@ pub struct JHasher {
 
 impl JHasher {
     #[inline(always)]
+    #[must_use]
     pub fn new(initval: u32) -> JHasher {
         JHasher {
             current: initval,
@@ -217,12 +227,18 @@ impl JHasher {
 #[inline(always)]
 #[cfg(target_endian = "little")]
 fn split_u64(val: u64) -> (u32, u32) {
-    (((val >> 32) as u32), ((val & 0x00000000FFFFFFFFu64) as u32))
+    (
+        ((val >> 32) as u32),
+        ((val & 0x00000000FFFFFFFF_u64) as u32),
+    )
 }
 
 #[cfg(target_endian = "big")]
 fn split_u64(val: u64) -> (u32, u32) {
-    (((val & 0x00000000FFFFFFFFu64) as u32), ((val >> 32) as u32))
+    (
+        ((val & 0x00000000FFFFFFFF_u64) as u32),
+        ((val >> 32) as u32),
+    )
 }
 
 impl std::hash::Hasher for JHasher {
@@ -288,10 +304,9 @@ pub struct JHashBuilder {
 }
 
 impl JHashBuilder {
+    #[must_use]
     pub fn new(initial_value: u32) -> JHashBuilder {
-        JHashBuilder {
-            initial_value: initial_value,
-        }
+        JHashBuilder { initial_value }
     }
 }
 
