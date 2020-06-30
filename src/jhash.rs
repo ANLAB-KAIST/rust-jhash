@@ -1,59 +1,52 @@
-use std;
-
-#[inline(always)]
-fn rotate_left_u32(x: u32, k: usize) -> u32 {
-    (((x) << (k)) | ((x) >> (32 - (k))))
-}
-
 #[inline(always)]
 pub fn jhash_mix(a: &mut u32, b: &mut u32, c: &mut u32) {
     *a = a.wrapping_sub(*c);
-    *a ^= rotate_left_u32(*c, 4);
+    *a ^= c.rotate_left(4);
     *c = c.wrapping_add(*b);
 
     *b = b.wrapping_sub(*a);
-    *b ^= rotate_left_u32(*a, 6);
+    *b ^= a.rotate_left(6);
     *a = a.wrapping_add(*c);
 
     *c = c.wrapping_sub(*b);
-    *c ^= rotate_left_u32(*b, 8);
+    *c ^= b.rotate_left(8);
     *b = b.wrapping_add(*a);
 
     *a = a.wrapping_sub(*c);
-    *a ^= rotate_left_u32(*c, 16);
+    *a ^= c.rotate_left(16);
     *c = c.wrapping_add(*b);
 
     *b = b.wrapping_sub(*a);
-    *b ^= rotate_left_u32(*a, 19);
+    *b ^= a.rotate_left(19);
     *a = a.wrapping_add(*c);
 
     *c = c.wrapping_sub(*b);
-    *c ^= rotate_left_u32(*b, 4);
+    *c ^= b.rotate_left(4);
     *b = b.wrapping_add(*a);
 }
 
 #[inline(always)]
 pub fn jhash_final(mut a: u32, mut b: u32, mut c: u32) -> u32 {
     c ^= b;
-    c = c.wrapping_sub(rotate_left_u32(b, 14));
+    c = c.wrapping_sub(b.rotate_left(14));
 
     a ^= c;
-    a = a.wrapping_sub(rotate_left_u32(c, 11));
+    a = a.wrapping_sub(c.rotate_left(11));
 
     b ^= a;
-    b = b.wrapping_sub(rotate_left_u32(a, 25));
+    b = b.wrapping_sub(a.rotate_left(25));
 
     c ^= b;
-    c = c.wrapping_sub(rotate_left_u32(b, 16));
+    c = c.wrapping_sub(b.rotate_left(16));
 
     a ^= c;
-    a = a.wrapping_sub(rotate_left_u32(c, 4));
+    a = a.wrapping_sub(c.rotate_left(4));
 
     b ^= a;
-    b = b.wrapping_sub(rotate_left_u32(a, 14));
+    b = b.wrapping_sub(a.rotate_left(14));
 
     c ^= b;
-    c = c.wrapping_sub(rotate_left_u32(b, 24));
+    c = c.wrapping_sub(b.rotate_left(24));
     c
 }
 
@@ -72,6 +65,7 @@ pub fn jhash(mut key: &[u8], initval: u32) -> u32 {
         a = a.wrapping_add(u32::from_ne_bytes(key[..4].try_into().unwrap()));
         b = b.wrapping_add(u32::from_ne_bytes(key[4..8].try_into().unwrap()));
         c = c.wrapping_add(u32::from_ne_bytes(key[8..12].try_into().unwrap()));
+        jhash_mix(&mut a, &mut b, &mut c);
         key = &key[12..];
     }
 
