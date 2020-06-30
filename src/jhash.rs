@@ -68,7 +68,9 @@ pub fn jhash(key: &[u8], initval: u32) -> u32 {
     let total_length = key.len();
     let mut length = 0usize;
 
-    a = JHASH_INITVAL.wrapping_add(length as u32).wrapping_add(initval);
+    a = JHASH_INITVAL
+        .wrapping_add(length as u32)
+        .wrapping_add(initval);
     b = a;
     c = a;
 
@@ -204,7 +206,9 @@ pub fn jhash2(key: &[u32], initval: u32) -> u32 {
     let total_length = key.len();
     let mut length = 0usize;
 
-    a = JHASH_INITVAL.wrapping_add(length as u32).wrapping_add(initval);
+    a = JHASH_INITVAL
+        .wrapping_add(length as u32)
+        .wrapping_add(initval);
     b = a;
     c = a;
 
@@ -239,7 +243,6 @@ pub fn jhash2(key: &[u32], initval: u32) -> u32 {
     return jhash_final(a, b, c);
 }
 
-
 #[inline(always)]
 fn jhash_nwords(mut a: u32, mut b: u32, mut c: u32, initval: u32) -> u32 {
     a = a.wrapping_add(initval);
@@ -251,26 +254,32 @@ fn jhash_nwords(mut a: u32, mut b: u32, mut c: u32, initval: u32) -> u32 {
 
 #[inline(always)]
 pub fn jhash_3words(a: u32, b: u32, c: u32, initval: u32) -> u32 {
-    return jhash_nwords(a,
-                        b,
-                        c,
-                        initval.wrapping_add(JHASH_INITVAL).wrapping_add(3 << 2));
+    return jhash_nwords(
+        a,
+        b,
+        c,
+        initval.wrapping_add(JHASH_INITVAL).wrapping_add(3 << 2),
+    );
 }
 
 #[inline(always)]
 pub fn jhash_2words(a: u32, b: u32, initval: u32) -> u32 {
-    return jhash_nwords(a,
-                        b,
-                        0,
-                        initval.wrapping_add(JHASH_INITVAL).wrapping_add(2 << 2));
+    return jhash_nwords(
+        a,
+        b,
+        0,
+        initval.wrapping_add(JHASH_INITVAL).wrapping_add(2 << 2),
+    );
 }
 
 #[inline(always)]
 pub fn jhash_1words(a: u32, initval: u32) -> u32 {
-    return jhash_nwords(a,
-                        0,
-                        0,
-                        initval.wrapping_add(JHASH_INITVAL).wrapping_add(1 << 2));
+    return jhash_nwords(
+        a,
+        0,
+        0,
+        initval.wrapping_add(JHASH_INITVAL).wrapping_add(1 << 2),
+    );
 }
 
 enum JHashBuffer {
@@ -392,7 +401,9 @@ pub struct JHashBuilder {
 
 impl JHashBuilder {
     pub fn new(initial_value: u32) -> JHashBuilder {
-        JHashBuilder { initial_value: initial_value }
+        JHashBuilder {
+            initial_value: initial_value,
+        }
     }
 }
 
