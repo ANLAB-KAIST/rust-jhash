@@ -92,49 +92,43 @@ pub fn jhash(mut key: &[u8], initval: u32) -> u32 {
 }
 
 #[inline(always)]
-pub fn jhash2(key: &[u32], initval: u32) -> u32 {
-    let mut a: u32;
-    let mut b: u32;
-    let mut c: u32;
-
-    let total_length = key.len();
-    let mut length = 0usize;
-
-    a = JHASH_INITVAL
-        .wrapping_add(length as u32)
+pub fn jhash2(mut key: &[u32], initval: u32) -> u32 {
+    let mut a = JHASH_INITVAL
+        .wrapping_add(key.len() as u32)
         .wrapping_add(initval);
-    b = a;
-    c = a;
+    let mut b = a;
+    let mut c = a;
 
     /* Handle most of the key */
-    while length <= total_length - 3 {
-        a = a.wrapping_add(key[length + 0]);
-        b = b.wrapping_add(key[length + 1]);
-        c = c.wrapping_add(key[length + 2]);
+    while key.len() > 3 {
+        a = a.wrapping_add(key[0]);
+        b = b.wrapping_add(key[1]);
+        c = c.wrapping_add(key[2]);
         jhash_mix(&mut a, &mut b, &mut c);
-        length += 3;
+        key = &key[3..];
     }
 
-    let final_bytes = &key[length..];
-    match final_bytes.len() {
+    match key.len() {
         3 => {
-            c = c.wrapping_add(final_bytes[2]);
-            b = b.wrapping_add(final_bytes[1]);
-            a = a.wrapping_add(final_bytes[0]);
+            c = c.wrapping_add(key[2]);
+            b = b.wrapping_add(key[1]);
+            a = a.wrapping_add(key[0]);
         }
         2 => {
-            b = b.wrapping_add(final_bytes[1]);
-            a = a.wrapping_add(final_bytes[0]);
+            b = b.wrapping_add(key[1]);
+            a = a.wrapping_add(key[0]);
         }
         1 => {
-            a = a.wrapping_add(final_bytes[0]);
+            a = a.wrapping_add(key[0]);
         }
-        0 => {}
+        0 => {
+            return c;
+        }
         _ => {
-            panic!("Never happen");
+            unreachable!("Never happen");
         }
     }
-    return jhash_final(a, b, c);
+    jhash_final(a, b, c)
 }
 
 #[inline(always)]
@@ -143,37 +137,37 @@ fn jhash_nwords(mut a: u32, mut b: u32, mut c: u32, initval: u32) -> u32 {
     b = b.wrapping_add(initval);
     c = c.wrapping_add(initval);
 
-    return jhash_final(a, b, c);
+    jhash_final(a, b, c)
 }
 
 #[inline(always)]
 pub fn jhash_3words(a: u32, b: u32, c: u32, initval: u32) -> u32 {
-    return jhash_nwords(
+    jhash_nwords(
         a,
         b,
         c,
         initval.wrapping_add(JHASH_INITVAL).wrapping_add(3 << 2),
-    );
+    )
 }
 
 #[inline(always)]
 pub fn jhash_2words(a: u32, b: u32, initval: u32) -> u32 {
-    return jhash_nwords(
+    jhash_nwords(
         a,
         b,
         0,
         initval.wrapping_add(JHASH_INITVAL).wrapping_add(2 << 2),
-    );
+    )
 }
 
 #[inline(always)]
 pub fn jhash_1words(a: u32, initval: u32) -> u32 {
-    return jhash_nwords(
+    jhash_nwords(
         a,
         0,
         0,
         initval.wrapping_add(JHASH_INITVAL).wrapping_add(1 << 2),
-    );
+    )
 }
 
 enum JHashBuffer {
