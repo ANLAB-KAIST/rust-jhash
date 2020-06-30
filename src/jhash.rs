@@ -69,13 +69,13 @@ pub fn jhash(key: &[u8], initval: u32) -> u32 {
     let mut length = 0usize;
 
     a = JHASH_INITVAL
-        .wrapping_add(length as u32)
+        .wrapping_add(total_length as u32)
         .wrapping_add(initval);
     b = a;
     c = a;
 
     let mut k: *const u8 = key.as_ptr();
-    while length + 12 <= total_length {
+    while length + 12 < total_length {
         a = a.wrapping_add(unsafe { *(k as *const u32) });
         k = unsafe { k.offset(4) };
         b = b.wrapping_add(unsafe { *(k as *const u32) });
@@ -189,7 +189,9 @@ pub fn jhash(key: &[u8], initval: u32) -> u32 {
         1 => {
             a = a.wrapping_add(final_bytes[0] as u32);
         }
-        0 => {}
+        0 => {
+            return c;
+        }
         _ => {
             panic!("Never happen");
         }
