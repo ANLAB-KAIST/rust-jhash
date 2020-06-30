@@ -60,143 +60,41 @@ pub fn jhash_final(mut a: u32, mut b: u32, mut c: u32) -> u32 {
 pub const JHASH_INITVAL: u32 = 0xdeadbeef;
 
 #[inline(always)]
-pub fn jhash(key: &[u8], initval: u32) -> u32 {
-    let mut a: u32;
-    let mut b: u32;
-    let mut c: u32;
-
-    let total_length = key.len();
-    let mut length = 0usize;
-
-    a = JHASH_INITVAL
-        .wrapping_add(total_length as u32)
+pub fn jhash(mut key: &[u8], initval: u32) -> u32 {
+    let mut a = JHASH_INITVAL
+        .wrapping_add(key.len() as u32)
         .wrapping_add(initval);
-    b = a;
-    c = a;
+    let mut b = a;
+    let mut c = a;
 
-    let mut k: *const u8 = key.as_ptr();
-    while length + 12 < total_length {
-        a = a.wrapping_add(unsafe { *(k as *const u32) });
-        k = unsafe { k.offset(4) };
-        b = b.wrapping_add(unsafe { *(k as *const u32) });
-        k = unsafe { k.offset(4) };
-        c = c.wrapping_add(unsafe { *(k as *const u32) });
-        k = unsafe { k.offset(4) };
-        jhash_mix(&mut a, &mut b, &mut c);
-        length += 12;
+    while key.len() > 12 {
+        use std::convert::TryInto;
+        a = a.wrapping_add(u32::from_ne_bytes(key[..4].try_into().unwrap()));
+        b = b.wrapping_add(u32::from_ne_bytes(key[4..8].try_into().unwrap()));
+        c = c.wrapping_add(u32::from_ne_bytes(key[8..12].try_into().unwrap()));
+        key = &key[12..];
     }
-    let final_bytes = &key[length..];
-    match final_bytes.len() {
-        12 => {
-            c = c.wrapping_add((final_bytes[11] as u32) << 24);
-            c = c.wrapping_add((final_bytes[10] as u32) << 16);
-            c = c.wrapping_add((final_bytes[9] as u32) << 8);
-            c = c.wrapping_add(final_bytes[8] as u32);
-            b = b.wrapping_add((final_bytes[7] as u32) << 24);
-            b = b.wrapping_add((final_bytes[6] as u32) << 16);
-            b = b.wrapping_add((final_bytes[5] as u32) << 8);
-            b = b.wrapping_add(final_bytes[4] as u32);
-            a = a.wrapping_add((final_bytes[3] as u32) << 24);
-            a = a.wrapping_add((final_bytes[2] as u32) << 16);
-            a = a.wrapping_add((final_bytes[1] as u32) << 8);
-            a = a.wrapping_add(final_bytes[0] as u32);
-        }
-        11 => {
-            c = c.wrapping_add((final_bytes[10] as u32) << 16);
-            c = c.wrapping_add((final_bytes[9] as u32) << 8);
-            c = c.wrapping_add(final_bytes[8] as u32);
-            b = b.wrapping_add((final_bytes[7] as u32) << 24);
-            b = b.wrapping_add((final_bytes[6] as u32) << 16);
-            b = b.wrapping_add((final_bytes[5] as u32) << 8);
-            b = b.wrapping_add(final_bytes[4] as u32);
-            a = a.wrapping_add((final_bytes[3] as u32) << 24);
-            a = a.wrapping_add((final_bytes[2] as u32) << 16);
-            a = a.wrapping_add((final_bytes[1] as u32) << 8);
-            a = a.wrapping_add(final_bytes[0] as u32);
-        }
-        10 => {
-            c = c.wrapping_add((final_bytes[9] as u32) << 8);
-            c = c.wrapping_add(final_bytes[8] as u32);
-            b = b.wrapping_add((final_bytes[7] as u32) << 24);
-            b = b.wrapping_add((final_bytes[6] as u32) << 16);
-            b = b.wrapping_add((final_bytes[5] as u32) << 8);
-            b = b.wrapping_add(final_bytes[4] as u32);
-            a = a.wrapping_add((final_bytes[3] as u32) << 24);
-            a = a.wrapping_add((final_bytes[2] as u32) << 16);
-            a = a.wrapping_add((final_bytes[1] as u32) << 8);
-            a = a.wrapping_add(final_bytes[0] as u32);
-        }
-        9 => {
-            c = c.wrapping_add(final_bytes[8] as u32);
-            b = b.wrapping_add((final_bytes[7] as u32) << 24);
-            b = b.wrapping_add((final_bytes[6] as u32) << 16);
-            b = b.wrapping_add((final_bytes[5] as u32) << 8);
-            b = b.wrapping_add(final_bytes[4] as u32);
-            a = a.wrapping_add((final_bytes[3] as u32) << 24);
-            a = a.wrapping_add((final_bytes[2] as u32) << 16);
-            a = a.wrapping_add((final_bytes[1] as u32) << 8);
-            a = a.wrapping_add(final_bytes[0] as u32);
-        }
-        8 => {
-            b = b.wrapping_add((final_bytes[7] as u32) << 24);
-            b = b.wrapping_add((final_bytes[6] as u32) << 16);
-            b = b.wrapping_add((final_bytes[5] as u32) << 8);
-            b = b.wrapping_add(final_bytes[4] as u32);
-            a = a.wrapping_add((final_bytes[3] as u32) << 24);
-            a = a.wrapping_add((final_bytes[2] as u32) << 16);
-            a = a.wrapping_add((final_bytes[1] as u32) << 8);
-            a = a.wrapping_add(final_bytes[0] as u32);
-        }
-        7 => {
-            b = b.wrapping_add((final_bytes[6] as u32) << 16);
-            b = b.wrapping_add((final_bytes[5] as u32) << 8);
-            b = b.wrapping_add(final_bytes[4] as u32);
-            a = a.wrapping_add((final_bytes[3] as u32) << 24);
-            a = a.wrapping_add((final_bytes[2] as u32) << 16);
-            a = a.wrapping_add((final_bytes[1] as u32) << 8);
-            a = a.wrapping_add(final_bytes[0] as u32);
-        }
-        6 => {
-            b = b.wrapping_add((final_bytes[5] as u32) << 8);
-            b = b.wrapping_add(final_bytes[4] as u32);
-            a = a.wrapping_add((final_bytes[3] as u32) << 24);
-            a = a.wrapping_add((final_bytes[2] as u32) << 16);
-            a = a.wrapping_add((final_bytes[1] as u32) << 8);
-            a = a.wrapping_add(final_bytes[0] as u32);
-        }
-        5 => {
-            b = b.wrapping_add(final_bytes[4] as u32);
-            a = a.wrapping_add((final_bytes[3] as u32) << 24);
-            a = a.wrapping_add((final_bytes[2] as u32) << 16);
-            a = a.wrapping_add((final_bytes[1] as u32) << 8);
-            a = a.wrapping_add(final_bytes[0] as u32);
-        }
-        4 => {
-            a = a.wrapping_add((final_bytes[3] as u32) << 24);
-            a = a.wrapping_add((final_bytes[2] as u32) << 16);
-            a = a.wrapping_add((final_bytes[1] as u32) << 8);
-            a = a.wrapping_add(final_bytes[0] as u32);
-        }
-        3 => {
-            a = a.wrapping_add((final_bytes[2] as u32) << 16);
-            a = a.wrapping_add((final_bytes[1] as u32) << 8);
-            a = a.wrapping_add(final_bytes[0] as u32);
-        }
-        2 => {
-            a = a.wrapping_add((final_bytes[1] as u32) << 8);
-            a = a.wrapping_add(final_bytes[0] as u32);
-        }
-        1 => {
-            a = a.wrapping_add(final_bytes[0] as u32);
-        }
-        0 => {
-            return c;
-        }
-        _ => {
-            panic!("Never happen");
-        }
+
+    if key.len() == 0 {
+        return c;
     }
-    return jhash_final(a, b, c);
+
+    c = c.wrapping_add((*key.get(11).unwrap_or(&0) as u32) << 24);
+    c = c.wrapping_add((*key.get(10).unwrap_or(&0) as u32) << 16);
+    c = c.wrapping_add((*key.get(9).unwrap_or(&0) as u32) << 8);
+    c = c.wrapping_add((*key.get(8).unwrap_or(&0) as u32) << 0);
+
+    b = b.wrapping_add((*key.get(7).unwrap_or(&0) as u32) << 24);
+    b = b.wrapping_add((*key.get(6).unwrap_or(&0) as u32) << 16);
+    b = b.wrapping_add((*key.get(5).unwrap_or(&0) as u32) << 8);
+    b = b.wrapping_add((*key.get(4).unwrap_or(&0) as u32) << 0);
+
+    a = a.wrapping_add((*key.get(3).unwrap_or(&0) as u32) << 24);
+    a = a.wrapping_add((*key.get(2).unwrap_or(&0) as u32) << 16);
+    a = a.wrapping_add((*key.get(1).unwrap_or(&0) as u32) << 8);
+    a = a.wrapping_add((*key.get(0).unwrap_or(&0) as u32) << 0);
+
+    jhash_final(a, b, c)
 }
 
 #[inline(always)]
