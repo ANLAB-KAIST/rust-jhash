@@ -1,6 +1,6 @@
 [package]
 name = "jhash"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Keunhong Lee <dlrmsghd@gmail.com>"]
 
 homepage = "https://github.com/ANLAB-KAIST/rust-jhash"
