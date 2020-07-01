@@ -12,9 +12,6 @@ keywords = ["Jenkins", "Hash"]
 description = """
 Rust implementation of Jenkins hash with 32-bit sized optimizations.
 """
+exclude = ["tests/**"]
 
 [dependencies]
-
-[lib]
-name = "jhash"
-path = "src/lib.rs"

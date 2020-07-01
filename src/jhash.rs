@@ -1,276 +1,182 @@
-use std;
-
-#[inline(always)]
-fn rotate_left_u32(x: u32, k: usize) -> u32 {
-    (((x) << (k)) | ((x) >> (32 - (k))))
-}
+#![allow(clippy::unreadable_literal,clippy::identity_op)]
 
 #[inline(always)]
 pub fn jhash_mix(a: &mut u32, b: &mut u32, c: &mut u32) {
     *a = a.wrapping_sub(*c);
-    *a ^= rotate_left_u32(*c, 4);
+    *a ^= c.rotate_left(4);
     *c = c.wrapping_add(*b);
 
     *b = b.wrapping_sub(*a);
-    *b ^= rotate_left_u32(*a, 6);
+    *b ^= a.rotate_left(6);
     *a = a.wrapping_add(*c);
 
     *c = c.wrapping_sub(*b);
-    *c ^= rotate_left_u32(*b, 8);
+    *c ^= b.rotate_left(8);
     *b = b.wrapping_add(*a);
 
     *a = a.wrapping_sub(*c);
-    *a ^= rotate_left_u32(*c, 16);
+    *a ^= c.rotate_left(16);
     *c = c.wrapping_add(*b);
 
     *b = b.wrapping_sub(*a);
-    *b ^= rotate_left_u32(*a, 19);
+    *b ^= a.rotate_left(19);
     *a = a.wrapping_add(*c);
 
     *c = c.wrapping_sub(*b);
-    *c ^= rotate_left_u32(*b, 4);
+    *c ^= b.rotate_left(4);
     *b = b.wrapping_add(*a);
 }
 
 #[inline(always)]
+#[must_use]
 pub fn jhash_final(mut a: u32, mut b: u32, mut c: u32) -> u32 {
     c ^= b;
-    c = c.wrapping_sub(rotate_left_u32(b, 14));
+    c = c.wrapping_sub(b.rotate_left(14));
 
     a ^= c;
-    a = a.wrapping_sub(rotate_left_u32(c, 11));
+    a = a.wrapping_sub(c.rotate_left(11));
 
     b ^= a;
-    b = b.wrapping_sub(rotate_left_u32(a, 25));
+    b = b.wrapping_sub(a.rotate_left(25));
 
     c ^= b;
-    c = c.wrapping_sub(rotate_left_u32(b, 16));
+    c = c.wrapping_sub(b.rotate_left(16));
 
     a ^= c;
-    a = a.wrapping_sub(rotate_left_u32(c, 4));
+    a = a.wrapping_sub(c.rotate_left(4));
 
     b ^= a;
-    b = b.wrapping_sub(rotate_left_u32(a, 14));
+    b = b.wrapping_sub(a.rotate_left(14));
 
     c ^= b;
-    c = c.wrapping_sub(rotate_left_u32(b, 24));
+    c = c.wrapping_sub(b.rotate_left(24));
     c
 }
 
 pub const JHASH_INITVAL: u32 = 0xdeadbeef;
 
 #[inline(always)]
-pub fn jhash(key: &[u8], initval: u32) -> u32 {
-    let mut a: u32;
-    let mut b: u32;
-    let mut c: u32;
+#[must_use]
+pub fn jhash(mut key: &[u8], initval: u32) -> u32 {
+    let mut a = JHASH_INITVAL
+        .wrapping_add(key.len() as u32)
+        .wrapping_add(initval);
+    let mut b = a;
+    let mut c = a;
 
-    let total_length = key.len();
-    let mut length = 0usize;
-
-    a = JHASH_INITVAL.wrapping_add(length as u32).wrapping_add(initval);
-    b = a;
-    c = a;
-
-    let mut k: *const u8 = key.as_ptr();
-    while length + 12 <= total_length {
-        a = a.wrapping_add(unsafe { *(k as *const u32) });
-        k = unsafe { k.offset(4) };
-        b = b.wrapping_add(unsafe { *(k as *const u32) });
-        k = unsafe { k.offset(4) };
-        c = c.wrapping_add(unsafe { *(k as *const u32) });
-        k = unsafe { k.offset(4) };
+    while key.len() > 12 {
+        use std::convert::TryInto;
+        a = a.wrapping_add(u32::from_ne_bytes(key[..4].try_into().unwrap()));
+        b = b.wrapping_add(u32::from_ne_bytes(key[4..8].try_into().unwrap()));
+        c = c.wrapping_add(u32::from_ne_bytes(key[8..12].try_into().unwrap()));
         jhash_mix(&mut a, &mut b, &mut c);
-        length += 12;
+        key = &key[12..];
     }
-    let final_bytes = &key[length..];
-    match final_bytes.len() {
-        12 => {
-            c = c.wrapping_add((final_bytes[11] as u32) << 24);
-            c = c.wrapping_add((final_bytes[10] as u32) << 16);
-            c = c.wrapping_add((final_bytes[9] as u32) << 8);
-            c = c.wrapping_add(final_bytes[8] as u32);
-            b = b.wrapping_add((final_bytes[7] as u32) << 24);
-            b = b.wrapping_add((final_bytes[6] as u32) << 16);
-            b = b.wrapping_add((final_bytes[5] as u32) << 8);
-            b = b.wrapping_add(final_bytes[4] as u32);
-            a = a.wrapping_add((final_bytes[3] as u32) << 24);
-            a = a.wrapping_add((final_bytes[2] as u32) << 16);
-            a = a.wrapping_add((final_bytes[1] as u32) << 8);
-            a = a.wrapping_add(final_bytes[0] as u32);
-        }
-        11 => {
-            c = c.wrapping_add((final_bytes[10] as u32) << 16);
-            c = c.wrapping_add((final_bytes[9] as u32) << 8);
-            c = c.wrapping_add(final_bytes[8] as u32);
-            b = b.wrapping_add((final_bytes[7] as u32) << 24);
-            b = b.wrapping_add((final_bytes[6] as u32) << 16);
-            b = b.wrapping_add((final_bytes[5] as u32) << 8);
-            b = b.wrapping_add(final_bytes[4] as u32);
-            a = a.wrapping_add((final_bytes[3] as u32) << 24);
-            a = a.wrapping_add((final_bytes[2] as u32) << 16);
-            a = a.wrapping_add((final_bytes[1] as u32) << 8);
-            a = a.wrapping_add(final_bytes[0] as u32);
-        }
-        10 => {
-            c = c.wrapping_add((final_bytes[9] as u32) << 8);
-            c = c.wrapping_add(final_bytes[8] as u32);
-            b = b.wrapping_add((final_bytes[7] as u32) << 24);
-            b = b.wrapping_add((final_bytes[6] as u32) << 16);
-            b = b.wrapping_add((final_bytes[5] as u32) << 8);
-            b = b.wrapping_add(final_bytes[4] as u32);
-            a = a.wrapping_add((final_bytes[3] as u32) << 24);
-            a = a.wrapping_add((final_bytes[2] as u32) << 16);
-            a = a.wrapping_add((final_bytes[1] as u32) << 8);
-            a = a.wrapping_add(final_bytes[0] as u32);
-        }
-        9 => {
-            c = c.wrapping_add(final_bytes[8] as u32);
-            b = b.wrapping_add((final_bytes[7] as u32) << 24);
-            b = b.wrapping_add((final_bytes[6] as u32) << 16);
-            b = b.wrapping_add((final_bytes[5] as u32) << 8);
-            b = b.wrapping_add(final_bytes[4] as u32);
-            a = a.wrapping_add((final_bytes[3] as u32) << 24);
-            a = a.wrapping_add((final_bytes[2] as u32) << 16);
-            a = a.wrapping_add((final_bytes[1] as u32) << 8);
-            a = a.wrapping_add(final_bytes[0] as u32);
-        }
-        8 => {
-            b = b.wrapping_add((final_bytes[7] as u32) << 24);
-            b = b.wrapping_add((final_bytes[6] as u32) << 16);
-            b = b.wrapping_add((final_bytes[5] as u32) << 8);
-            b = b.wrapping_add(final_bytes[4] as u32);
-            a = a.wrapping_add((final_bytes[3] as u32) << 24);
-            a = a.wrapping_add((final_bytes[2] as u32) << 16);
-            a = a.wrapping_add((final_bytes[1] as u32) << 8);
-            a = a.wrapping_add(final_bytes[0] as u32);
-        }
-        7 => {
-            b = b.wrapping_add((final_bytes[6] as u32) << 16);
-            b = b.wrapping_add((final_bytes[5] as u32) << 8);
-            b = b.wrapping_add(final_bytes[4] as u32);
-            a = a.wrapping_add((final_bytes[3] as u32) << 24);
-            a = a.wrapping_add((final_bytes[2] as u32) << 16);
-            a = a.wrapping_add((final_bytes[1] as u32) << 8);
-            a = a.wrapping_add(final_bytes[0] as u32);
-        }
-        6 => {
-            b = b.wrapping_add((final_bytes[5] as u32) << 8);
-            b = b.wrapping_add(final_bytes[4] as u32);
-            a = a.wrapping_add((final_bytes[3] as u32) << 24);
-            a = a.wrapping_add((final_bytes[2] as u32) << 16);
-            a = a.wrapping_add((final_bytes[1] as u32) << 8);
-            a = a.wrapping_add(final_bytes[0] as u32);
-        }
-        5 => {
-            b = b.wrapping_add(final_bytes[4] as u32);
-            a = a.wrapping_add((final_bytes[3] as u32) << 24);
-            a = a.wrapping_add((final_bytes[2] as u32) << 16);
-            a = a.wrapping_add((final_bytes[1] as u32) << 8);
-            a = a.wrapping_add(final_bytes[0] as u32);
-        }
-        4 => {
-            a = a.wrapping_add((final_bytes[3] as u32) << 24);
-            a = a.wrapping_add((final_bytes[2] as u32) << 16);
-            a = a.wrapping_add((final_bytes[1] as u32) << 8);
-            a = a.wrapping_add(final_bytes[0] as u32);
-        }
-        3 => {
-            a = a.wrapping_add((final_bytes[2] as u32) << 16);
-            a = a.wrapping_add((final_bytes[1] as u32) << 8);
-            a = a.wrapping_add(final_bytes[0] as u32);
-        }
-        2 => {
-            a = a.wrapping_add((final_bytes[1] as u32) << 8);
-            a = a.wrapping_add(final_bytes[0] as u32);
-        }
-        1 => {
-            a = a.wrapping_add(final_bytes[0] as u32);
-        }
-        0 => {}
-        _ => {
-            panic!("Never happen");
-        }
+
+    if key.is_empty() {
+        return c;
     }
-    return jhash_final(a, b, c);
+
+    c = c.wrapping_add((*key.get(11).unwrap_or(&0) as u32) << 24);
+    c = c.wrapping_add((*key.get(10).unwrap_or(&0) as u32) << 16);
+    c = c.wrapping_add((*key.get(9).unwrap_or(&0) as u32) << 8);
+    c = c.wrapping_add((*key.get(8).unwrap_or(&0) as u32) << 0);
+
+    b = b.wrapping_add((*key.get(7).unwrap_or(&0) as u32) << 24);
+    b = b.wrapping_add((*key.get(6).unwrap_or(&0) as u32) << 16);
+    b = b.wrapping_add((*key.get(5).unwrap_or(&0) as u32) << 8);
+    b = b.wrapping_add((*key.get(4).unwrap_or(&0) as u32) << 0);
+
+    a = a.wrapping_add((*key.get(3).unwrap_or(&0) as u32) << 24);
+    a = a.wrapping_add((*key.get(2).unwrap_or(&0) as u32) << 16);
+    a = a.wrapping_add((*key.get(1).unwrap_or(&0) as u32) << 8);
+    a = a.wrapping_add((*key.get(0).unwrap_or(&0) as u32) << 0);
+
+    jhash_final(a, b, c)
 }
 
 #[inline(always)]
-pub fn jhash2(key: &[u32], initval: u32) -> u32 {
-    let mut a: u32;
-    let mut b: u32;
-    let mut c: u32;
-
-    let total_length = key.len();
-    let mut length = 0usize;
-
-    a = JHASH_INITVAL.wrapping_add(length as u32).wrapping_add(initval);
-    b = a;
-    c = a;
+#[must_use]
+pub fn jhash2(mut key: &[u32], initval: u32) -> u32 {
+    let mut a = JHASH_INITVAL
+        .wrapping_add(key.len() as u32)
+        .wrapping_add(initval);
+    let mut b = a;
+    let mut c = a;
 
     /* Handle most of the key */
-    while length <= total_length - 3 {
-        a = a.wrapping_add(key[length + 0]);
-        b = b.wrapping_add(key[length + 1]);
-        c = c.wrapping_add(key[length + 2]);
+    while key.len() > 3 {
+        a = a.wrapping_add(key[0]);
+        b = b.wrapping_add(key[1]);
+        c = c.wrapping_add(key[2]);
         jhash_mix(&mut a, &mut b, &mut c);
-        length += 3;
+        key = &key[3..];
     }
 
-    let final_bytes = &key[length..];
-    match final_bytes.len() {
+    match key.len() {
         3 => {
-            c = c.wrapping_add(final_bytes[2]);
-            b = b.wrapping_add(final_bytes[1]);
-            a = a.wrapping_add(final_bytes[0]);
+            c = c.wrapping_add(key[2]);
+            b = b.wrapping_add(key[1]);
+            a = a.wrapping_add(key[0]);
         }
         2 => {
-            b = b.wrapping_add(final_bytes[1]);
-            a = a.wrapping_add(final_bytes[0]);
+            b = b.wrapping_add(key[1]);
+            a = a.wrapping_add(key[0]);
         }
         1 => {
-            a = a.wrapping_add(final_bytes[0]);
+            a = a.wrapping_add(key[0]);
         }
-        0 => {}
+        0 => {
+            return c;
+        }
         _ => {
-            panic!("Never happen");
+            unreachable!("Never happen");
         }
     }
-    return jhash_final(a, b, c);
+    jhash_final(a, b, c)
 }
 
-
 #[inline(always)]
+#[must_use]
 fn jhash_nwords(mut a: u32, mut b: u32, mut c: u32, initval: u32) -> u32 {
     a = a.wrapping_add(initval);
     b = b.wrapping_add(initval);
     c = c.wrapping_add(initval);
 
-    return jhash_final(a, b, c);
+    jhash_final(a, b, c)
 }
 
 #[inline(always)]
+#[must_use]
 pub fn jhash_3words(a: u32, b: u32, c: u32, initval: u32) -> u32 {
-    return jhash_nwords(a,
-                        b,
-                        c,
-                        initval.wrapping_add(JHASH_INITVAL).wrapping_add(3 << 2));
+    jhash_nwords(
+        a,
+        b,
+        c,
+        initval.wrapping_add(JHASH_INITVAL).wrapping_add(3 << 2),
+    )
 }
 
 #[inline(always)]
+#[must_use]
 pub fn jhash_2words(a: u32, b: u32, initval: u32) -> u32 {
-    return jhash_nwords(a,
-                        b,
-                        0,
-                        initval.wrapping_add(JHASH_INITVAL).wrapping_add(2 << 2));
+    jhash_nwords(
+        a,
+        b,
+        0,
+        initval.wrapping_add(JHASH_INITVAL).wrapping_add(2 << 2),
+    )
 }
 
 #[inline(always)]
+#[must_use]
 pub fn jhash_1words(a: u32, initval: u32) -> u32 {
-    return jhash_nwords(a,
-                        0,
-                        0,
-                        initval.wrapping_add(JHASH_INITVAL).wrapping_add(1 << 2));
+    jhash_nwords(
+        a,
+        0,
+        0,
+        initval.wrapping_add(JHASH_INITVAL).wrapping_add(1 << 2),
+    )
 }
 
 enum JHashBuffer {
@@ -294,6 +200,7 @@ pub struct JHasher {
 
 impl JHasher {
     #[inline(always)]
+    #[must_use]
     pub fn new(initval: u32) -> JHasher {
         JHasher {
             current: initval,
@@ -320,12 +227,18 @@ impl JHasher {
 #[inline(always)]
 #[cfg(target_endian = "little")]
 fn split_u64(val: u64) -> (u32, u32) {
-    (((val >> 32) as u32), ((val & 0x00000000FFFFFFFFu64) as u32))
+    (
+        ((val >> 32) as u32),
+        ((val & 0x00000000FFFFFFFF_u64) as u32),
+    )
 }
 
 #[cfg(target_endian = "big")]
 fn split_u64(val: u64) -> (u32, u32) {
-    (((val & 0x00000000FFFFFFFFu64) as u32), ((val >> 32) as u32))
+    (
+        ((val & 0x00000000FFFFFFFF_u64) as u32),
+        ((val >> 32) as u32),
+    )
 }
 
 impl std::hash::Hasher for JHasher {
@@ -391,8 +304,9 @@ pub struct JHashBuilder {
 }
 
 impl JHashBuilder {
+    #[must_use]
     pub fn new(initial_value: u32) -> JHashBuilder {
-        JHashBuilder { initial_value: initial_value }
+        JHashBuilder { initial_value }
     }
 }
 
